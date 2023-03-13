@@ -49,13 +49,7 @@ func main() {
 		log.Fatal("Please set OPENAI_API_KEY environment variable")
 	}
 
-	file, err := os.OpenFile("interaction.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-
-	logger := log.New(file, "", log.LstdFlags)
+	logger := createLogger("interaction.log")
 
 	client := &http.Client{}
 
@@ -73,61 +67,72 @@ func main() {
 			break
 		}
 
-		payload := request{
-			Model:       aiModel,
-			Messages:    []message{{Role: "user", Content: escapedInput}},
-			Temperature: temperature,
-		}
-
-		jsonPayload, err := json.Marshal(payload)
+		response, err := getAIResponse(apiKey, client, escapedInput)
 		if err != nil {
-			log.Printf("Error marshalling payload: %s\n", err.Error())
-			logger.Printf("Error marshalling payload: %s\n", err.Error())
-			continue
-		}
-
-		req, err := http.NewRequest("POST", apiEndpoint, bytes.NewBuffer(jsonPayload))
-		if err != nil {
-			log.Printf("Error creating request: %s\n", err.Error())
-			logger.Printf("Error creating request: %s\n", err.Error())
-			continue
-		}
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
-
-		resp, err := client.Do(req)
-		if err != nil {
-			log.Printf("Error sending request: %s\n", err.Error())
-			logger.Printf("Error sending request: %s\n", err.Error())
-			continue
-		}
-		defer resp.Body.Close()
-
-		var response response
-		err = json.NewDecoder(resp.Body).Decode(&response)
-		if err != nil {
-			log.Printf("Error decoding response: %s\n", err.Error())
-			logger.Printf("Error decoding response: %s\n", err.Error())
-			continue
-		}
-
-		if resp.StatusCode != http.StatusOK {
-			log.Printf("Error: unexpected status code %d", resp.StatusCode)
-			logger.Printf("Error: unexpected status code %d", resp.StatusCode)
+			logger.Printf("Error getting AI response: %s\n", err.Error())
 			continue
 		}
 
 		if len(response.Choices) == 0 {
-			log.Println("Error: empty response")
 			logger.Println("Error: empty response")
 			continue
 		}
 
-		var message message
-		if response.Choices[0].Message.Content != "" {
-			message = response.Choices[0].Message
-			logger.Printf("AI: %s\n", message.Content)
-			log.Printf("AI: %s\n", message.Content)
+		message := response.Choices[0].Message
+		if message.Content != "" {
+			logAndPrintResponse(logger, message)
 		}
 	}
+}
+
+func createLogger(logFile string) *log.Logger {
+	file, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return log.New(file, "", log.LstdFlags)
+}
+
+func getAIResponse(apiKey string, client *http.Client, escapedInput string) (*response, error) {
+	payload := request{
+		Model:       aiModel,
+		Messages:    []message{{Role: "user", Content: escapedInput}},
+		Temperature: temperature,
+	}
+
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("error marshalling payload: %s", err.Error())
+	}
+
+	req, err := http.NewRequest("POST", apiEndpoint, bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %s", err.Error())
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("error sending request: %s", err.Error())
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	var responseObj response
+	err = json.NewDecoder(resp.Body).Decode(&responseObj)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding response: %s", err.Error())
+	}
+
+	return &responseObj, nil
+}
+
+func logAndPrintResponse(logger *log.Logger, message message) {
+	logger.Printf("AI: %s\n", message.Content)
+	log.Printf("AI: %s\n", message.Content)
 }
