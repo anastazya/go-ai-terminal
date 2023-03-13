@@ -4,7 +4,7 @@ This is a simple AI chatbot written in Go that utilizes OpenAI's GPT-3 API to ge
 
 ## Installation and Setup
 
-To use this chatbot, you will need to have a valid OpenAI API key. If you do not have one, you can sign up for a free trial at https://openai.com/signup/.
+To use this chatbot, you will need to have a valid OpenAI API key. If you do not have one, you can sign up for a free trial at https://beta.openai.com/signup.
 
 Clone this repository to your local machine.
 Set the OPENAI_API_KEY environment variable to your OpenAI API key.
