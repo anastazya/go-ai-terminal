@@ -111,6 +111,12 @@ func main() {
 			continue
 		}
 
+		if resp.StatusCode != http.StatusOK {
+			log.Printf("Error: unexpected status code %d", resp.StatusCode)
+			logger.Printf("Error: unexpected status code %d", resp.StatusCode)
+			continue
+		}
+
 		if len(response.Choices) == 0 {
 			log.Println("Error: empty response")
 			logger.Println("Error: empty response")
