@@ -8,6 +8,11 @@ To use this chatbot, you will need to have a valid OpenAI API key. If you do not
 
 Clone this repository to your local machine.
 Set the OPENAI_API_KEY environment variable to your OpenAI API key.
+
+```bash
+export OPENAI_API_KEY=<your API key>
+```
+
 Install the necessary dependencies by running go get in the project directory.
 
 ## Usage
